@@ -97,6 +97,13 @@ export interface Book {
   difficultyLevel: 1 | 2 | 3 | 4 | 5;
   estimatedReadingTime: string;
   rating?: number;
+  /**
+   * The book's single strongest recommendation reason — the reader intent it
+   * best serves (e.g. "Build Better Habits", "Develop Financial Wisdom").
+   * The recommendation engine can match users to this before falling back to
+   * genre or popularity. Optional; secondary intents live in `topics`/`keywords`.
+   */
+  primaryIntent?: string;
   personalityTags: PersonalityDimension[];
   skillsDeveloped: string[];
   emotionalTone: string;
