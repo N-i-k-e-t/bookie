@@ -1,6 +1,6 @@
 import type { Book, PersonalityProfile, Recommendation, PersonalityDimension } from '../types';
 import { PERSONALITY_DIMENSIONS } from '../types';
-import { profileToText, generateInsights } from './personalityMapper';
+import { generateInsights } from './personalityMapper';
 import booksData from '../data/books.json';
 
 // ─── Load Books ──────────────────────────────────────────────────────
@@ -136,7 +136,6 @@ export function generateRecommendation(
 // ─── Explanation Generation ──────────────────────────────────────────
 
 function generateExplanation(profile: PersonalityProfile, book: Book): string {
-  const profileText = profileToText(profile);
   const bookTopics = book.topics.slice(0, 3).join(', ');
 
   return `Based on our conversation, I can tell you're someone who is ${getTopTraitDescriptor(profile)}. "${book.title}" by ${book.author} speaks directly to that part of you. It explores ${bookTopics}, which aligns perfectly with where you are right now in your journey. This isn't just a good book — it's the right book for you at this moment.`;

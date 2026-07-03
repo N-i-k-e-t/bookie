@@ -1,7 +1,5 @@
 import type {
-  AIWorkerRequest,
   AIWorkerResponse,
-  EmbeddingWorkerRequest,
   EmbeddingWorkerResponse,
 } from '../types';
 

@@ -8,7 +8,11 @@
       "Bash(git commit *)",
       "Bash(git push *)",
       "Bash(git ls-remote *)",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "PowerShell(Start-Process pwsh -ArgumentList '-NoExit','-File','scripts/auto-push.ps1' -WorkingDirectory \\(Get-Location\\).Path; Start-Sleep -Seconds 2; Get-Process pwsh | Select-Object Id, StartTime | Sort-Object StartTime | Select-Object -Last 3)",
+      "Bash(printf '\\\\n\\\\n---\\\\n_Real-time auto-push enabled via `scripts/auto-push.ps1`._\\\\n')",
+      "Bash(git fetch *)",
+      "PowerShell($status = git status --porcelain; $changed = \\($status -split \"`n\" | Where-Object { $_ }\\).Count; Write-Host \"Changed files: $changed\"; git add -A 2>$null | Out-Null; $stamp = Get-Date -Format \"yyyy-MM-dd HH:mm:ss\"; git commit -q -m \"auto: sync $changed change\\(s\\) @ $stamp\" 2>&1; Write-Host \"commit exit: $LASTEXITCODE\"; git push origin main 2>&1; Write-Host \"push exit: $LASTEXITCODE\")"
     ]
   }
 }

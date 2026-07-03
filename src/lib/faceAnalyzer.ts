@@ -61,7 +61,7 @@ export async function analyzeFace(imageElement: HTMLImageElement): Promise<FaceA
 
     // Determine dominant emotion from blendshapes
     const dominantEmotion = detectEmotion(blendshapes);
-    const expressionSummary = generateExpressionSummary(blendshapes, dominantEmotion);
+    const expressionSummary = generateExpressionSummary(dominantEmotion);
 
     return {
       detected: true,
@@ -97,7 +97,6 @@ function detectEmotion(blendshapes: Record<string, number>): string {
 }
 
 function generateExpressionSummary(
-  blendshapes: Record<string, number>,
   emotion: string
 ): string {
   const summaries: Record<string, string> = {

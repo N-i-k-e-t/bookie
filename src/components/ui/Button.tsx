@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import type { HTMLMotionProps } from 'motion/react';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart'> {
   variant?: 'primary' | 'secondary' | 'gold' | 'ghost';
   fullWidth?: boolean;
 }

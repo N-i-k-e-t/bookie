@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { useAppStore } from '../store/appStore';
 import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
@@ -161,7 +161,7 @@ export const ConversationPage: React.FC = () => {
         <div className="flex flex-col gap-4">
           {messages.map((msg, idx) => (
             <motion.div
-              key={idx}
+              key={`${msg.timestamp}-${idx}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}

@@ -136,7 +136,7 @@ export const BookRevealPage: React.FC = () => {
             </h3>
             <ul className="flex flex-col gap-3">
               {keyLessons.map((lesson, idx) => (
-                <li key={idx} className="flex gap-3 items-start text-sm text-gray-300">
+                <li key={`lesson-${idx}`} className="flex gap-3 items-start text-sm text-gray-300">
                   <span className="text-brand-gold font-bold">✓</span>
                   <span>{lesson}</span>
                 </li>
@@ -151,7 +151,7 @@ export const BookRevealPage: React.FC = () => {
             </h3>
             <div className="flex flex-col gap-3">
               {personalityInsights.map((insight, idx) => (
-                <p key={idx} className="text-sm text-gray-300 leading-relaxed">
+                <p key={`insight-${idx}`} className="text-sm text-gray-300 leading-relaxed">
                   💡 {insight}
                 </p>
               ))}

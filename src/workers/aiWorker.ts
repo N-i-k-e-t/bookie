@@ -3,7 +3,10 @@ import type { AIWorkerRequest } from '../types';
 
 // Configure environment
 env.allowLocalModels = false;
-env.backends.onnx.wasm.numThreads = navigator.hardwareConcurrency || 4;
+const wasmConfig = env.backends?.onnx?.wasm;
+if (wasmConfig) {
+  wasmConfig.numThreads = navigator.hardwareConcurrency || 4;
+}
 
 let generator: any = null;
 let currentModel: string = '';
@@ -40,8 +43,9 @@ self.addEventListener('message', async (event: MessageEvent<AIWorkerRequest>) =>
       // Determine device capability
       let device = 'wasm';
       try {
-        if (navigator.gpu) {
-          const adapter = await navigator.gpu.requestAdapter();
+        const nav = navigator as any;
+        if (nav.gpu) {
+          const adapter = await nav.gpu.requestAdapter();
           if (adapter) {
             device = 'webgpu';
           }

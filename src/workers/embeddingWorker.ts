@@ -3,7 +3,10 @@ import type { EmbeddingWorkerRequest } from '../types';
 
 // Configure environment
 env.allowLocalModels = false;
-env.backends.onnx.wasm.numThreads = 2;
+const wasmConfig = env.backends?.onnx?.wasm;
+if (wasmConfig) {
+  wasmConfig.numThreads = 2;
+}
 
 let extractor: any = null;
 

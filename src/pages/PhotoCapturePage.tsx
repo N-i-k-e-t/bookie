@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+
 import { useAppStore } from '../store/appStore';
 import { Button } from '../components/ui/Button';
 import { GlassCard } from '../components/ui/GlassCard';
@@ -17,9 +17,15 @@ export const PhotoCapturePage: React.FC = () => {
 
   // Start analyzer in background
   useEffect(() => {
-    initializeFaceAnalyzer().then((success) => {
-      console.log('FaceLandmarker loaded in background:', success);
-    });
+    const loadAnalyzer = async () => {
+      try {
+        const success = await initializeFaceAnalyzer();
+        console.log('FaceLandmarker loaded in background:', success);
+      } catch (error) {
+        console.warn('Could not initialize face analyzer in background:', error);
+      }
+    };
+    loadAnalyzer();
   }, []);
 
   const startCamera = async () => {
