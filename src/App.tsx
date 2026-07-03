@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Analytics } from '@vercel/analytics/react';
 import { useAppStore } from './store/appStore';
 import { ParticleBackground } from './components/ui/ParticleBackground';
 
@@ -56,6 +57,9 @@ export const App: React.FC = () => {
       <footer className="w-full text-center py-6 text-[10px] text-gray-500 tracking-wider uppercase z-10 pointer-events-none">
         Bookie © {new Date().getFullYear()} • Privacy-First AI Recommendations
       </footer>
+
+      {/* Vercel Web Analytics */}
+      <Analytics />
     </div>
   );
 };
