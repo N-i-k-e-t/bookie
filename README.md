@@ -1,36 +1,72 @@
-# React + TypeScript + Vite
+# Bookie 📖
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
-
+### *Your Next Favorite Book, Chosen by AI.*
+**Privacy-First • AI-Native • Zero Backend**
 
 ---
-_Real-time auto-push enabled via `scripts/auto-push.ps1`._
+
+## 🌟 Vision
+People don't want another list of "Top 100 Books." They want someone to say:
+> *"I know where you are in life, and I think this book is exactly what you need right now."*
+
+Bookie is an AI-powered reading companion built around a simple belief: **The right book, at the right time, can change a person's life.** It behaves like a personal reading mentor, engaging you in a short, natural conversation to understand your aspirations, mindset, and habits, then recommending a single carefully selected book with a detailed explanation of why it fits you.
+
+---
+
+## 🔒 Privacy by Design
+Privacy is a core product feature:
+- **Local AI Inference:** All Small Language Model (SLM) processing, text generation, and embeddings run locally in the browser using [Transformers.js](https://huggingface.co/docs/transformers.js).
+- **On-Device Face Analysis:** Apparent facial expressions are analyzed entirely on-device using [MediaPipe Tasks Vision](https://developers.google.com/mediapipe/solutions/vision/face_landmarker) and discarded immediately.
+- **Zero Backend:** No server, no database, no tracking. Your conversations and data never leave your browser.
+
+---
+
+## 🛠️ Technology Stack
+- **Core:** React 19 + TypeScript + Vite
+- **Styling:** Tailwind CSS v4 (CSS-first configurations)
+- **Animations:** Motion (formerly Framer Motion)
+- **3D Graphics:** React Three Fiber (R3F) + Three.js for procedural 3D book cover rendering
+- **AI Runtime:** Transformers.js v3 (WebGPU accelerated with WASM fallback)
+- **SLM Model:** Qwen2.5 0.5B Instruct (quantized q4)
+- **Embeddings Model:** all-MiniLM-L6-v2 (384-dimensional vector embeddings)
+- **Face Analysis:** MediaPipe FaceLandmarker
+- **State Management:** Zustand
+
+---
+
+## 🚀 Setup & Execution
+
+### 1. Install Dependencies
+```bash
+npm install
+```
+
+### 2. Run Development Server
+```bash
+npm run dev
+```
+
+### 3. Build for Production
+```bash
+npm run build
+```
+
+---
+
+## 🔄 Recommendation Pipeline
+```
+User Name → Apparent Expression Cues (Smile, Eyebrows) → Conversation Flow (3-5 Adaptive Questions)
+                      ↓
+           Multidimensional Personality Profile (20 Dimensions)
+                      ↓
+           Sentence Transformer Embedding (all-MiniLM-L6-v2)
+                      ↓
+           Cosine Similarity Index Search + SLM Re-ranking (Qwen2.5)
+                      ↓
+           Procedural 3D Book Cover Reveal + Personal Explanation
+```
+
+---
+
+## 📖 Book Dataset
+Bookie includes a highly curated library of premium titles spanning Self-Help, Business, Psychology, Science, Philosophy, Fiction, Biography, Technology, Creativity, and Spirituality, with precomputed mappings across 20 personality dimensions.

@@ -3,26 +3,30 @@
     Real-time auto-push watcher for the "bookie" repo.
 
 .DESCRIPTION
-    Watches the repository for file changes and, after a short quiet period
-    (debounce), automatically stages, commits, and pushes to origin/main.
+    Polls the git working tree on a short interval. When it detects changes
+    and they have settled (no further changes for the debounce window), it
+    stages, commits with a timestamped message, and pushes to origin/main.
 
-    Designed to run continuously in a dedicated terminal. Safe to Ctrl+C at
-    any time; a final flush pushes whatever is pending.
+    Polling is used instead of FileSystemWatcher events because it avoids
+    PowerShell runspace-scope pitfalls and is rock-solid across editors that
+    write via temp-file swaps. Effective latency is DebounceMs + one poll.
+
+    Safe to Ctrl+C at any time; a final flush pushes whatever is pending.
 
 .USAGE
     pwsh -File scripts/auto-push.ps1
-    # optional overrides:
     pwsh -File scripts/auto-push.ps1 -DebounceMs 3000 -Branch main
 #>
 
 param(
-    [string]$Branch = "main",
-    [int]$DebounceMs = 2500,          # quiet period after last change before pushing
-    [int]$MaxWaitMs = 15000,          # force a push even if edits keep streaming in
-    [string]$Remote = "origin"
+    [string]$Branch     = "main",
+    [string]$Remote     = "origin",
+    [int]$PollMs        = 1000,    # how often to check for changes
+    [int]$DebounceMs    = 2500,    # require this much quiet before pushing
+    [int]$MaxWaitMs     = 15000    # force a push after this long even if edits keep coming
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 # --- Locate repo root (parent of this script's folder) ---
 $RepoRoot = Split-Path -Parent $PSScriptRoot
@@ -39,90 +43,64 @@ function Write-Log($msg, $color = "Gray") {
 }
 
 Write-Log "Auto-push watching '$RepoRoot' -> $Remote/$Branch" "Cyan"
-Write-Log "Debounce ${DebounceMs}ms  |  Press Ctrl+C to stop." "DarkGray"
+Write-Log "Poll ${PollMs}ms | Debounce ${DebounceMs}ms | Ctrl+C to stop." "DarkGray"
 
-# --- Commit + push, only if there is something to push ---
+function Get-DirtyCount {
+    $status = git status --porcelain 2>$null
+    if ([string]::IsNullOrWhiteSpace($status)) { return 0 }
+    return ($status -split "`n" | Where-Object { $_ }).Count
+}
+
 function Invoke-Push {
-    # Anything to commit?
-    $status = git status --porcelain
-    if ([string]::IsNullOrWhiteSpace($status)) {
-        return  # working tree clean, nothing new
-    }
+    $changed = Get-DirtyCount
+    if ($changed -eq 0) { return }
 
-    $changed = ($status -split "`n" | Where-Object { $_ }).Count
     git add -A 2>$null | Out-Null
-
     $stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $msg = "auto: sync $changed change(s) @ $stamp"
-
-    # Commit; if nothing actually staged (e.g. ignored-only), bail quietly.
-    git commit -q -m $msg 2>$null
-    if ($LASTEXITCODE -ne 0) { return }
+    git commit -q -m "auto: sync $changed change(s) @ $stamp" 2>$null
+    if ($LASTEXITCODE -ne 0) { return }   # nothing actually staged
 
     Write-Log "Committed $changed change(s). Pushing..." "Yellow"
-    git push $Remote $Branch 2>&1 | ForEach-Object { Write-Log "  $_" "DarkGray" }
-
+    $out = git push $Remote $Branch 2>&1
     if ($LASTEXITCODE -eq 0) {
         Write-Log "Pushed to $Remote/$Branch OK." "Green"
     } else {
-        Write-Log "Push FAILED (will retry on next change). Check network/auth." "Red"
+        Write-Log "Push FAILED (will retry next cycle): $out" "Red"
     }
 }
 
-# --- FileSystemWatcher setup ---
-$fsw = New-Object System.IO.FileSystemWatcher
-$fsw.Path = $RepoRoot
-$fsw.IncludeSubdirectories = $true
-$fsw.EnableRaisingEvents = $true
-$fsw.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor `
-                    [System.IO.NotifyFilters]::DirectoryName -bor `
-                    [System.IO.NotifyFilters]::LastWrite -bor `
-                    [System.IO.NotifyFilters]::Size
+# --- Polling debounce loop ---
+$prevDirty   = -1          # dirty count seen on the previous poll
+$quietMs     = 0           # how long the dirty count has been stable and > 0
+$accumMs     = 0           # how long we've had pending changes total
 
-# Shared state for debounce (script scope so events can see it)
-$script:LastChange = $null
-$script:FirstChange = $null
-
-# Paths we never care about (avoid feedback loops from .git internals)
-$ignore = '[\\/](\.git|node_modules|dist|dist-ssr)[\\/]'
-
-$onChange = {
-    $full = $Event.SourceEventArgs.FullPath
-    if ($full -match $using:ignore) { return }
-    $now = Get-Date
-    $script:LastChange = $now
-    if (-not $script:FirstChange) { $script:FirstChange = $now }
-}
-
-$handlers = @()
-foreach ($evt in 'Changed','Created','Deleted','Renamed') {
-    $handlers += Register-ObjectEvent -InputObject $fsw -EventName $evt -Action $onChange
-}
-
-# --- Main loop: poll debounce state and push when quiet ---
 try {
     while ($true) {
-        Start-Sleep -Milliseconds 400
+        Start-Sleep -Milliseconds $PollMs
+        $dirty = Get-DirtyCount
 
-        if ($script:LastChange) {
-            $sinceLast  = ((Get-Date) - $script:LastChange).TotalMilliseconds
-            $sinceFirst = ((Get-Date) - $script:FirstChange).TotalMilliseconds
+        if ($dirty -eq 0) {
+            $prevDirty = 0; $quietMs = 0; $accumMs = 0
+            continue
+        }
 
-            # Push when things have been quiet for DebounceMs,
-            # OR we've been accumulating for longer than MaxWaitMs.
-            if ($sinceLast -ge $DebounceMs -or $sinceFirst -ge $MaxWaitMs) {
-                $script:LastChange = $null
-                $script:FirstChange = $null
-                try { Invoke-Push } catch { Write-Log "Push error: $_" "Red" }
-            }
+        $accumMs += $PollMs
+
+        if ($dirty -eq $prevDirty) {
+            $quietMs += $PollMs        # count unchanged -> things are settling
+        } else {
+            $quietMs = 0               # still actively editing -> reset quiet timer
+        }
+        $prevDirty = $dirty
+
+        if ($quietMs -ge $DebounceMs -or $accumMs -ge $MaxWaitMs) {
+            Invoke-Push
+            $prevDirty = -1; $quietMs = 0; $accumMs = 0
         }
     }
 }
 finally {
-    Write-Log "Stopping watcher, flushing final changes..." "Cyan"
-    $handlers | ForEach-Object { Unregister-Event -SourceIdentifier $_.Name -ErrorAction SilentlyContinue }
-    $fsw.EnableRaisingEvents = $false
-    $fsw.Dispose()
-    try { Invoke-Push } catch { Write-Log "Final push error: $_" "Red" }
+    Write-Log "Stopping - flushing final changes..." "Cyan"
+    Invoke-Push
     Write-Log "Watcher stopped." "Cyan"
 }
