@@ -3,9 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/appStore';
 import { LoadingOrb } from '../components/ui/LoadingOrb';
 import { getThinkingMessages } from '../lib/conversationEngine';
-import { buildPersonalityProfile, profileToEmbeddingText } from '../lib/personalityMapper';
+import { buildPersonalityProfile } from '../lib/personalityMapper';
 import { generateRecommendation } from '../lib/recommendationEngine';
-import { getEmbedding } from '../workers/workerManager';
 
 export const ThinkingPage: React.FC = () => {
   const {
@@ -28,62 +27,37 @@ export const ThinkingPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [messagesList.length]);
 
-  // Handle recommendation generation pipeline
+  // Deterministic, on-device recommendation — NO models, NO network calls.
+  // A brief anticipation animation runs, then we always advance to the reveal.
   useEffect(() => {
-    const runPipeline = async () => {
-      // Progress simulation (takes around 6 seconds total for anticipation)
-      const progressInterval = setInterval(() => {
-        setLoadingProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(progressInterval);
-            return 100;
-          }
-          return prev + 1.5;
-        });
-      }, 80);
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+      progress = Math.min(100, progress + 2);
+      setLoadingProgress(progress);
+    }, 60);
 
-      try {
-        console.log('Calculating personality profile...');
-        // 1. Build personality profile from conversation responses + face analysis
-        const profile = buildPersonalityProfile(messages, faceAnalysis);
-        setPersonalityProfile(profile);
+    let revealTimer: ReturnType<typeof setTimeout>;
+    try {
+      // 1. Build personality profile from conversation answers + face cues.
+      const profile = buildPersonalityProfile(messages, faceAnalysis);
+      setPersonalityProfile(profile);
 
-        // 2. Generate embedding text summary
-        const embedText = profileToEmbeddingText(profile, messages);
-        console.log('Generated embedding text:', embedText);
+      // 2. Match deterministically against the catalog (personality tags +
+      //    emotional tone + keyword overlap). Instant, no embeddings required.
+      const rec = generateRecommendation(profile);
+      setRecommendation(rec);
+    } catch (error) {
+      console.error('Error generating recommendation:', error);
+    } finally {
+      // Always reveal after a short beat, whatever happened above.
+      revealTimer = setTimeout(() => setStep('reveal'), 3200);
+    }
 
-        // 3. Compute vector embedding from text summary
-        let userEmbedding: number[] | undefined;
-        try {
-          userEmbedding = await getEmbedding(embedText);
-          console.log('Computed user embedding vector successfully.');
-        } catch (error) {
-          console.warn('Embedding computation failed, falling back to heuristic matching:', error);
-        }
-
-        // 4. Generate recommendation (deterministic traits + vector cosine similarity search)
-        const rec = generateRecommendation(profile, userEmbedding);
-        setRecommendation(rec);
-
-        // Make sure progress reaches 100% and displays the next step smoothly
-        setTimeout(() => {
-          clearInterval(progressInterval);
-          setLoadingProgress(100);
-          setTimeout(() => {
-            setStep('reveal');
-          }, 500);
-        }, 6000);
-
-      } catch (error) {
-        console.error('Error generating recommendation:', error);
-        alert('An error occurred while analyzing your results. Restarting.');
-        setStep('landing');
-      }
-
-      return () => clearInterval(progressInterval);
+    return () => {
+      clearInterval(progressInterval);
+      clearTimeout(revealTimer);
     };
-
-    runPipeline();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
